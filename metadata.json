@@ -1,0 +1,6 @@
+{
+  "name": "MatdarMitra",
+  "description": "A personal tool to search and extract family members from Indian electoral voter roll PDFs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

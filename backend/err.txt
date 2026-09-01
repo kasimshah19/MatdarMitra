@@ -1,0 +1,12 @@
+❌ MongoDB connection failed: options usenewurlparser, useunifiedtopology are not supported
+Stack: MongoParseError: options usenewurlparser, useunifiedtopology are not supported
+    at parseOptions (C:\Users\kasim\Downloads\matdarmitra\backend\node_modules\mongodb\lib\connection_string.js:277:15)
+    at new MongoClient (C:\Users\kasim\Downloads\matdarmitra\backend\node_modules\mongodb\lib\mongo_client.js:67:61)
+    at NativeConnection.createClient (C:\Users\kasim\Downloads\matdarmitra\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\connection.js:338:14)
+    at NativeConnection.openUri (C:\Users\kasim\Downloads\matdarmitra\backend\node_modules\mongoose\lib\connection.js:1081:34)
+    at Mongoose.connect (C:\Users\kasim\Downloads\matdarmitra\backend\node_modules\mongoose\lib\mongoose.js:475:15)
+    at Object.<anonymous> (C:\Users\kasim\Downloads\matdarmitra\backend\server.js:22:10)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
