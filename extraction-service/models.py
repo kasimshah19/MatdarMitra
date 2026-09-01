@@ -12,6 +12,8 @@ class VoterRecord(BaseModel):
     gender: str
     partNo: str
     pageNo: int
+    cardIndex: int = 0
+    confidence: float = 1.0
     needsReview: bool
 
 class ConstituencyMetadata(BaseModel):

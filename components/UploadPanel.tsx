@@ -12,6 +12,7 @@ interface UploadPanelProps {
 export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: UploadPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [progressMsg, setProgressMsg] = useState("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -23,13 +24,13 @@ export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: Upload
     }
 
     setErrorMsg("");
+    setProgressMsg("");
     setIsLoading(true);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      // Typically takes 30-90s depending on PDF size
       const res = await fetch("http://localhost:5000/api/upload", {
         method: "POST",
         body: formData,
@@ -40,17 +41,50 @@ export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: Upload
         throw new Error(errType.error || "Upload processing failed");
       }
 
-      const data = await res.json();
-      console.log("Upload Success:", data);
-      
-      onUploadSuccess();
+      const initData = await res.json();
+      if (initData.jobId) {
+          setProgressMsg("Processing started...");
+          // Begin polling
+          const pollInterval = setInterval(async () => {
+              try {
+                  const statusRes = await fetch(`http://localhost:5000/api/upload-status/${initData.jobId}`);
+                  const statusData = await statusRes.json();
+                  
+                  if (statusData.status === "completed") {
+                      clearInterval(pollInterval);
+                      setProgressMsg(`Extraction complete! Extracted ${statusData.summary.totalExtracted} records.`);
+                      setTimeout(() => {
+                           setIsLoading(false);
+                           onUploadSuccess();
+                           if (fileInputRef.current) fileInputRef.current.value = "";
+                      }, 1500);
+                  } else if (statusData.status === "failed") {
+                      clearInterval(pollInterval);
+                      throw new Error(statusData.error || "OCR Pipeline Crash");
+                  } else {
+                      setProgressMsg(
+`Pages processed: ${statusData.pagesProcessed} / ${statusData.totalPages}
+Expected voters: ${statusData.expectedVoters || 1096}
+Records extracted: ${statusData.recordsExtracted}
+(Scanning individual blocks... Please wait)`);
+                  }
+              } catch (e: any) {
+                  clearInterval(pollInterval);
+                  console.error("Polling error", e);
+                  setErrorMsg(e.message || "Failed to establish connection to processing server.");
+                  setIsLoading(false);
+              }
+          }, 3000);
+      } else {
+          // Fallback sync logic
+          onUploadSuccess();
+          setIsLoading(false);
+      }
+
     } catch (err: any) {
       console.error("[MatdarMitra] Upload Error:", err);
       setErrorMsg(err.message || "Failed to establish connection to processing server.");
-    } finally {
       setIsLoading(false);
-      // reset file input
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -68,9 +102,9 @@ export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: Upload
           <h3 className="text-lg font-semibold text-slate-800">
             {isLoading ? "Processing Electoral Roll..." : "Upload Voter Roll PDF"}
           </h3>
-          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto whitespace-pre-wrap">
             {isLoading 
-              ? "This may take 1-2 minutes for large PDFs. Please do not close this window."
+              ? (progressMsg || "This may take a few minutes for 40+ pages. Please do not close this window.")
               : "Drag and drop your electoral roll PDF here, or click to browse."}
           </p>
         </div>

@@ -91,89 +91,97 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const form = new FormData();
         form.append('file', req.file.buffer, req.file.originalname);
 
-        // Call the Python FastAPI OCR service, with a 2 minute timeout for large PDFs
-        let pyResponse;
-        try {
-            pyResponse = await axios.post(PYTHON_SERVICE_URL, form, {
-                headers: {
-                    ...form.getHeaders()
-                },
-                timeout: 120000,
-                maxContentLength: Infinity,
-                maxBodyLength: Infinity
-            });
-        } catch (apiErr) {
-            console.error('\n--- PYTHON SERVICE COMM FAILURE ---');
-            console.error('URL Attempted:', PYTHON_SERVICE_URL);
-            console.error('Error Code:', apiErr.code);
-            console.error('Error Message:', apiErr.message);
-            console.error('Response Status:', apiErr.response?.status);
-            console.error('Response Data:', apiErr.response?.data);
-            console.error('-----------------------------------\n');
+        // Send async request to Python service
+        const pyResponse = await axios.post(`${PYTHON_SERVICE_URL}-async`, form, {
+            headers: form.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        });
 
-            return res.status(502).json({
-                error: 'Failed to communicate with extraction microservice',
-                details: apiErr.response ? apiErr.response.data : apiErr.message,
-                code: apiErr.code
+        // Immediately return Job ID to frontend to start polling
+        const { jobId } = pyResponse.data;
+        res.json({ success: true, jobId, message: "Extraction job started" });
+    } catch (apiErr) {
+        console.error('Upload Error:', apiErr);
+        res.status(502).json({ error: 'Failed to communicate with extraction microservice' });
+    }
+});
+
+// Polling endpoint for frontend 
+app.get('/api/upload-status/:jobId', async (req, res) => {
+    try {
+        const { jobId } = req.params;
+        const pyStatusRes = await axios.get(`http://localhost:8000/status/${jobId}`);
+        const jobData = pyStatusRes.data;
+
+        if (jobData.status === 'completed' && jobData.result) {
+            // Once Python is done, insert the data to MongoDB
+            const { metadata, voters, summary } = jobData.result;
+            let needsReviewCount = 0;
+            const validVoters = (voters || []).filter(v => v && v.epcNo && v.epcNo.trim().length > 0);
+
+            const bulkOps = (voters || []).map(v => {
+                let epcValue = v.epcNo ? v.epcNo.trim() : "";
+                if (!epcValue) {
+                    epcValue = `REVIEW-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+                    v.needsReview = true;
+                }
+                const doc = {
+                    srNo: parseInt(v.srNo) || null,
+                    epcNo: epcValue,
+                    voterName: v.voterName || 'Unknown',
+                    relativeName: v.relativeName || 'Unknown',
+                    relationType: v.relationType || 'Other',
+                    houseNo: v.houseNo || '-',
+                    age: parseInt(v.age) || null,
+                    gender: v.gender || 'Other',
+                    partNo: v.partNo || metadata.partNumber,
+                    boothName: metadata.pollingStation,
+                    assemblyConstituency: metadata.assemblyConstituency,
+                    pageNo: v.pageNo,
+                    cardIndex: v.cardIndex || 0,
+                    confidence: v.confidence ?? 1.0,
+                    needsReview: v.needsReview || false
+                };
+                if (doc.needsReview) needsReviewCount++;
+                return {
+                    updateOne: {
+                        filter: { epcNo: doc.epcNo, partNo: doc.partNo },
+                        update: { $set: doc },
+                        upsert: true
+                    }
+                };
+            });
+
+            // Use ordered: false so if one record fails validation, it doesn't crash the entire batch
+            const bulkResult = bulkOps.length > 0
+                ? await Voter.bulkWrite(bulkOps, { ordered: false })
+                : { upsertedCount: 0, modifiedCount: 0 };
+
+            return res.json({
+                status: 'completed',
+                summary: {
+                    totalExtracted: (voters || []).length,
+                    newRecords: bulkResult.upsertedCount || 0,
+                    updatedRecords: bulkResult.modifiedCount || 0,
+                    needsReviewCount: needsReviewCount
+                }
             });
         }
 
-        const extractionData = pyResponse.data;
-
-        const { metadata, voters, summary } = extractionData;
-        let needsReviewCount = 0;
-
-        // Ensure we only process voters that actually have an EPC number 
-        // (OCR can sometimes fail to parse the EPC cell, causing Mongoose ValidationError to crash the batch)
-        const validVoters = (voters || []).filter(v => v && v.epcNo && v.epcNo.trim().length > 0);
-
-        const bulkOps = validVoters.map(v => {
-            // Enforce the strict types mapped via the frontend requirements
-            const doc = {
-                srNo: parseInt(v.srNo) || null,
-                epcNo: v.epcNo.trim(),
-                voterName: v.voterName || 'Unknown',
-                relativeName: v.relativeName || 'Unknown',
-                relationType: v.relationType || 'Other',
-                houseNo: v.houseNo || '-',
-                age: parseInt(v.age) || null,
-                gender: v.gender || 'Other',
-                partNo: v.partNo || metadata.partNumber,
-                boothName: metadata.pollingStation,
-                assemblyConstituency: metadata.assemblyConstituency,
-                pageNo: v.pageNo,
-                needsReview: v.needsReview || false
-            };
-
-            if (doc.needsReview) needsReviewCount++;
-
-            return {
-                updateOne: {
-                    filter: { epcNo: doc.epcNo, partNo: doc.partNo },
-                    update: { $set: doc },
-                    upsert: true
-                }
-            };
-        });
-
-        // Use ordered: false so if one record fails validation, it doesn't crash the entire batch
-        const bulkResult = bulkOps.length > 0
-            ? await Voter.bulkWrite(bulkOps, { ordered: false })
-            : { upsertedCount: 0, modifiedCount: 0 };
-
+        // Return raw progress state
         res.json({
-            success: true,
-            summary: {
-                totalExtracted: validVoters.length,
-                newRecords: bulkResult.upsertedCount || 0,
-                updatedRecords: bulkResult.modifiedCount || 0,
-                needsReviewCount: needsReviewCount
-            }
+            status: jobData.status,
+            pagesProcessed: jobData.pagesProcessed,
+            totalPages: jobData.totalPages,
+            recordsExtracted: jobData.recordsExtracted,
+            expectedVoters: jobData.expectedVoters || 1096,
+            error: jobData.error
         });
 
-    } catch (error) {
-        console.error('Unexpected server error during upload sequence:', error);
-        res.status(500).json({ error: 'Internal server error', message: error.message });
+    } catch (err) {
+        console.error("Status Check Error:", err.message);
+        res.status(500).json({ error: "Could not check job status" });
     }
 });
 
@@ -183,7 +191,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
  */
 app.get('/api/voters', async (req, res) => {
     try {
-        const { search, gender, ageMin, ageMax, partNo, page = 1, limit = 100 } = req.query;
+        const { search, gender, ageMin, ageMax, partNo, page = 1, limit = 5000 } = req.query;
         const filter = {};
 
         // Fuzzy Search Support
@@ -224,7 +232,7 @@ app.get('/api/voters', async (req, res) => {
         const skip = (Number(page) - 1) * Number(limit);
 
         const voters = await Voter.find(filter)
-            .sort({ createdAt: -1 }) // Or partNo/pageNo/srNo
+            .sort({ srNo: 1, _id: 1 }) // Deterministic sort by actual sequential serial number mapped across document
             .skip(skip)
             .limit(Number(limit));
 

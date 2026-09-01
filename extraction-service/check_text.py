@@ -1,0 +1,1 @@
+import fitz, os; p=[f for f in os.listdir(r'C:\Users\kasim\Downloads') if 'MAR-75' in f][0]; doc = fitz.open(os.path.join(r'C:\Users\kasim\Downloads', p)); print(doc[2].get_text()[:1000].encode('utf-8'))

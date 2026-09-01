@@ -97,8 +97,8 @@ export default function Home() {
         if (genderFilter !== "All") queryParams.set("gender", genderFilter);
         if (debouncedAgeMin) queryParams.set("ageMin", String(debouncedAgeMin));
         if (debouncedAgeMax) queryParams.set("ageMax", String(debouncedAgeMax));
-        // Using limit 200 for frontend speed, can add pagination UI later if thousands
-        queryParams.set("limit", "200"); 
+        // Retrieve comprehensive list ensuring all legitimate scanned document sections are present
+        queryParams.set("limit", "5000"); 
 
         const res = await fetch(`${API_BASE}/voters?${queryParams.toString()}`);
         if (!res.ok) throw new Error("Search API failed");

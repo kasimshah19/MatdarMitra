@@ -13,6 +13,8 @@ const voterSchema = new mongoose.Schema({
     boothName: String,
     assemblyConstituency: String,
     pageNo: Number,
+    cardIndex: { type: Number, default: 0 },
+    confidence: { type: Number, default: 1.0 },
     needsReview: { type: Boolean, default: false }
 }, {
     timestamps: true
