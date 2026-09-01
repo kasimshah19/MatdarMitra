@@ -10,6 +10,7 @@ const FormData = require('form-data');
 // Import Models
 const Voter = require('./models/Voter');
 const FamilyList = require('./models/FamilyList');
+const Document = require('./models/Document');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -98,9 +99,23 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             maxBodyLength: Infinity
         });
 
-        // Immediately return Job ID to frontend to start polling
         const { jobId } = pyResponse.data;
-        res.json({ success: true, jobId, message: "Extraction job started" });
+
+        // Save job reference in Mongo for persistence
+        const doc = await Document.create({
+            fileName: req.file.originalname,
+            status: "queued",
+            jobId: jobId
+        });
+
+        // Immediately return Document ID to frontend to start polling, with status 202 (Accepted)
+        res.status(202).json({
+            success: true,
+            documentId: doc._id,
+            jobId: jobId,
+            status: "queued",
+            message: "Extraction job started"
+        });
     } catch (apiErr) {
         console.error('Upload Error:', apiErr);
         res.status(502).json({ error: 'Failed to communicate with extraction microservice' });
@@ -113,6 +128,7 @@ app.get('/api/upload-status/:jobId', async (req, res) => {
         const { jobId } = req.params;
         const pyStatusRes = await axios.get(`http://localhost:8000/status/${jobId}`);
         const jobData = pyStatusRes.data;
+        const docObj = await Document.findOne({ jobId });
 
         if (jobData.status === 'completed' && jobData.result) {
             // Once Python is done, insert the data to MongoDB
@@ -141,7 +157,8 @@ app.get('/api/upload-status/:jobId', async (req, res) => {
                     pageNo: v.pageNo,
                     cardIndex: v.cardIndex || 0,
                     confidence: v.confidence ?? 1.0,
-                    needsReview: v.needsReview || false
+                    needsReview: v.needsReview || false,
+                    documentId: docObj ? docObj._id : null
                 };
                 if (doc.needsReview) needsReviewCount++;
                 return {
@@ -157,6 +174,18 @@ app.get('/api/upload-status/:jobId', async (req, res) => {
             const bulkResult = bulkOps.length > 0
                 ? await Voter.bulkWrite(bulkOps, { ordered: false })
                 : { upsertedCount: 0, modifiedCount: 0 };
+
+            // Update document state
+            if (docObj) {
+                docObj.status = 'completed';
+                docObj.totalPages = jobData.totalPages;
+                docObj.expectedRecords = jobData.expectedVoters;
+                docObj.processingStats = {
+                    totalExtracted: (voters || []).length,
+                    needsReviewCount: needsReviewCount
+                };
+                await docObj.save();
+            }
 
             return res.json({
                 status: 'completed',

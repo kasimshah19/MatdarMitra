@@ -1,0 +1,1 @@
+const mongoose = require('mongoose'); const documentSchema = new mongoose.Schema({ fileName: String, totalPages: Number, expectedRecords: Number, status: String, processingStats: Object, jobId: String }, { timestamps: true }); module.exports = mongoose.model('Document', documentSchema);
