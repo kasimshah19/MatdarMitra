@@ -120,21 +120,24 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
         const extractionData = pyResponse.data;
 
-        // Upsert logic for DB processing
         const { metadata, voters, summary } = extractionData;
         let needsReviewCount = 0;
 
-        const bulkOps = voters.map(v => {
+        // Ensure we only process voters that actually have an EPC number 
+        // (OCR can sometimes fail to parse the EPC cell, causing Mongoose ValidationError to crash the batch)
+        const validVoters = (voters || []).filter(v => v && v.epcNo && v.epcNo.trim().length > 0);
+
+        const bulkOps = validVoters.map(v => {
             // Enforce the strict types mapped via the frontend requirements
             const doc = {
                 srNo: parseInt(v.srNo) || null,
-                epcNo: v.epcNo,
-                voterName: v.voterName,
-                relativeName: v.relativeName,
-                relationType: v.relationType,
-                houseNo: v.houseNo,
+                epcNo: v.epcNo.trim(),
+                voterName: v.voterName || 'Unknown',
+                relativeName: v.relativeName || 'Unknown',
+                relationType: v.relationType || 'Other',
+                houseNo: v.houseNo || '-',
                 age: parseInt(v.age) || null,
-                gender: v.gender,
+                gender: v.gender || 'Other',
                 partNo: v.partNo || metadata.partNumber,
                 boothName: metadata.pollingStation,
                 assemblyConstituency: metadata.assemblyConstituency,
@@ -153,12 +156,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             };
         });
 
-        const bulkResult = await Voter.bulkWrite(bulkOps);
+        // Use ordered: false so if one record fails validation, it doesn't crash the entire batch
+        const bulkResult = bulkOps.length > 0
+            ? await Voter.bulkWrite(bulkOps, { ordered: false })
+            : { upsertedCount: 0, modifiedCount: 0 };
 
         res.json({
             success: true,
             summary: {
-                totalExtracted: voters.length,
+                totalExtracted: validVoters.length,
                 newRecords: bulkResult.upsertedCount || 0,
                 updatedRecords: bulkResult.modifiedCount || 0,
                 needsReviewCount: needsReviewCount
@@ -196,9 +202,19 @@ app.get('/api/voters', async (req, res) => {
         }
 
         if (ageMin || ageMax) {
-            filter.age = {};
-            if (ageMin) filter.age.$gte = Number(ageMin);
-            if (ageMax) filter.age.$lte = Number(ageMax);
+            const ageCond = {};
+            if (ageMin) ageCond.$gte = Number(ageMin);
+            if (ageMax) ageCond.$lte = Number(ageMax);
+
+            // Allow voters whose age failed to parse (null) to still show up by default
+            filter.$or = filter.$or || [];
+            if (filter.$or.length > 0) {
+                // wrap existing $or in $and to combine safely
+                filter.$and = [{ $or: filter.$or }, { $or: [{ age: ageCond }, { age: null }] }];
+                delete filter.$or;
+            } else {
+                filter.$or = [{ age: ageCond }, { age: null }];
+            }
         }
 
         if (partNo) {
