@@ -22,6 +22,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [hasLoadedData, setHasLoadedData] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [metadata, setMetadata] = useState<ConstituencyMetadata>({
     assemblyConstituency: "",
@@ -125,7 +126,7 @@ export default function Home() {
     };
 
     fetchFilteredVoters();
-  }, [debouncedSearch, genderFilter, debouncedAgeMin, debouncedAgeMax, hasLoadedData]); 
+  }, [debouncedSearch, genderFilter, debouncedAgeMin, debouncedAgeMax, hasLoadedData, refreshKey]); 
   // removed metadata from deps to avoid infinite loops
 
   // 3. Selection Synchronization (Debounced posting)
@@ -192,7 +193,8 @@ export default function Home() {
   };
 
   const handleUploadSuccess = async () => {
-     setHasLoadedData(true); // Triggers main fetching effect
+     setHasLoadedData(true); // Triggers main fetching effect first time
+     setRefreshKey(prev => prev + 1); // Forces refetch on subsequent uploads
   };
 
   return (
@@ -234,6 +236,7 @@ export default function Home() {
                     )}
                     <VoterTable
                       voters={voters}
+                      totalRecords={totalVoters}
                       isLoading={isLoading && !hasLoadedData} // Only skeleton block on initial heavy load
                       selectedIds={selectedVoterIds}
                       onToggleSelection={handleToggleSelection}

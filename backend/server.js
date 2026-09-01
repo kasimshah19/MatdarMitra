@@ -243,14 +243,16 @@ app.get('/api/voters', async (req, res) => {
             if (ageMin) ageCond.$gte = Number(ageMin);
             if (ageMax) ageCond.$lte = Number(ageMax);
 
-            // Allow voters whose age failed to parse (null) to still show up by default
+            // Allow voters whose age failed to parse (null or 0) to still show up by default
+            const fallbackAges = [{ age: ageCond }, { age: null }, { age: 0 }];
+
             filter.$or = filter.$or || [];
             if (filter.$or.length > 0) {
                 // wrap existing $or in $and to combine safely
-                filter.$and = [{ $or: filter.$or }, { $or: [{ age: ageCond }, { age: null }] }];
+                filter.$and = [{ $or: filter.$or }, { $or: fallbackAges }];
                 delete filter.$or;
             } else {
-                filter.$or = [{ age: ageCond }, { age: null }];
+                filter.$or = fallbackAges;
             }
         }
 
@@ -275,6 +277,42 @@ app.get('/api/voters', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * Diagnostic Endpoint
+ */
+app.get('/api/documents/:documentId/diagnostics', async (req, res) => {
+    try {
+        const { documentId } = req.params;
+        const doc = await Document.findById(documentId);
+        if (!doc) return res.status(404).json({ error: "Document not found" });
+
+        const recordsInDb = await Voter.countDocuments({ documentId: doc._id });
+        const validRecords = await Voter.countDocuments({ documentId: doc._id, needsReview: false });
+        const needsReview = await Voter.countDocuments({ documentId: doc._id, needsReview: true });
+
+        return res.json({
+            documentId: doc._id,
+            pdf: { totalPages: doc.totalPages || 0 },
+            processing: {
+                pagesProcessed: doc.totalPages || 0,
+                pagesFailed: 0,
+            },
+            extraction: {
+                cardsDetected: (doc.processingStats && doc.processingStats.totalExtracted) || recordsInDb,
+                ocrCandidates: recordsInDb,
+                parsedRecords: recordsInDb,
+                validRecords: validRecords,
+                needsReview: needsReview,
+                duplicates: 0
+            },
+            database: { records: recordsInDb },
+            api: { total: recordsInDb }
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Diagnostic fail: " + err.message });
     }
 });
 

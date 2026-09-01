@@ -5,13 +5,14 @@ import { AlertTriangle } from "lucide-react";
 
 interface VoterTableProps {
   voters: Voter[];
+  totalRecords: number;
   isLoading: boolean;
   selectedIds: string[];
   onToggleSelection: (id: string) => void;
   onToggleAll: (ids: string[], isSelected: boolean) => void;
 }
 
-export function VoterTable({ voters, isLoading, selectedIds, onToggleSelection, onToggleAll }: VoterTableProps) {
+export function VoterTable({ voters, totalRecords, isLoading, selectedIds, onToggleSelection, onToggleAll }: VoterTableProps) {
   const allCurrentSelected = voters.length > 0 && voters.every(v => selectedIds.includes(v.id));
 
   return (
@@ -103,7 +104,7 @@ export function VoterTable({ voters, isLoading, selectedIds, onToggleSelection, 
         </table>
       </div>
       <div className="bg-slate-50 border-t border-slate-200 p-3 text-xs text-slate-500 flex justify-between items-center">
-        <span>Showing {voters.length} records</span>
+        <span>Showing {voters.length > 0 ? 1 : 0}–{voters.length} of {totalRecords} records</span>
         {selectedIds.length > 0 && (
           <span className="font-medium text-cyan-700">{selectedIds.length} selected overall</span>
         )}

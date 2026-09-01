@@ -1,10 +1,12 @@
 import os
 import shutil
+import json
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from models import ExtractionResponse, ExtractionSummary
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pipeline.render import render_pdf_pages
 from pipeline.grid import detect_grid_boxes
@@ -51,8 +53,6 @@ def run_extraction_job(job_id: str, temp_path: str):
         needs_review_count = 0
         global_sr_idx = 1
         
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
         def process_page_thread(idx, page_img):
             page_voters = []
             page_review = 0
@@ -68,7 +68,10 @@ def run_extraction_job(job_id: str, temp_path: str):
             return (idx, page_voters, page_review)
 
         page_results = []
-        with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as executor:
+        # MUST Restrict concurrency to prevent OS Live-Lock/Starvation. 
+        # Tesseract spins up OpenMP threads internally.
+        ocr_concurrency = int(os.getenv("OCR_CONCURRENCY", "2"))
+        with ThreadPoolExecutor(max_workers=ocr_concurrency) as executor:
             future_to_page = {executor.submit(process_page_thread, i, p): i for i, p in enumerate(pages)}
             for future in as_completed(future_to_page):
                 idx, page_voters, p_rev = future.result()
@@ -94,6 +97,18 @@ def run_extraction_job(job_id: str, temp_path: str):
         
         JOBS[job_id]["status"] = "completed"
         JOBS[job_id]["result"] = ExtractionResponse(metadata=metadata, voters=all_voters, summary=summary).dict()
+
+        # Write exact deterministic NDJSON pipeline trace backup 
+        processing_dir = f"processing-results/{job_id}"
+        os.makedirs(processing_dir, exist_ok=True)
+        with open(f"{processing_dir}/records.json", "w", encoding="utf-8") as rf:
+            json.dump(JOBS[job_id]["result"], rf, default=lambda x: x.dict() if hasattr(x, "dict") else str(x))
+            
+        print(f"========== PYTHON EXTRACTION RESULT ==========")
+        print(f"PDF pages: {JOBS[job_id]['totalPages']}")
+        print(f"Pages processed: {JOBS[job_id]['pagesProcessed']}")
+        print(f"Parsed records: {len(all_voters)}")
+        print(f"==============================================")
 
     except Exception as e:
         import traceback
