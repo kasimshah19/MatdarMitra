@@ -31,7 +31,8 @@ export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: Upload
     formData.append("file", file);
 
     try {
-      const res = await fetch("http://localhost:5000/api/upload", {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${API_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -47,7 +48,7 @@ export function UploadPanel({ onUploadSuccess, isLoading, setIsLoading }: Upload
           // Begin polling
           const pollInterval = setInterval(async () => {
               try {
-                  const statusRes = await fetch(`http://localhost:5000/api/upload-status/${initData.jobId}`);
+                  const statusRes = await fetch(`${API_URL}/api/upload-status/${initData.jobId}`);
                   const statusData = await statusRes.json();
                   
                   if (statusData.status === "completed") {
