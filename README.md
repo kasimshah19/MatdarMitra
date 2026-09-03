@@ -1,6 +1,8 @@
 <div align="center">
-  <h1>🗳️ MatdarMitra</h1>
-  <i>An AI-Assisted Document Intelligence & Civic Data Platform</i>
+  
+  <h1>🗳️ MatdarMitra (मतदारमित्र)</h1>
+  <i>An Enterprise-Grade Document Intelligence & Civic Data Platform</i>
+  
   <br/><br/>
   
   <p>
@@ -10,63 +12,72 @@
     <img src="https://img.shields.io/badge/Database-MongoDB-47A248?style=for-the-badge&logo=mongodb" alt="MongoDB" />
     <img src="https://img.shields.io/badge/AI_Engine-OpenCV%20%7C%20Tesseract-ff9800?style=for-the-badge&logo=opencv" alt="OpenCV" />
   </p>
+
+  <p>
+    <b>Bridging the gap between unstructured government documents and actionable civic data.</b>
+  </p>
 </div>
 
 <hr />
 
-## 🌟 Executive Summary
+## 📖 The Problem: Why MatdarMitra?
 
-**MatdarMitra** is a specialized, production-ready full-stack application built to solve a critical data-extraction bottleneck: autonomously converting unstructured, monolithic government electoral rolls (Voter PDF scans) into highly actionable, searchable, and structured databases.
+In India, **Electoral Rolls (Voter Lists)** are public documents released as massive, image-heavy, 40+ page PDFs. They are often scanned poorly, contain bilingual text (English & Regional languages like Marathi), and use complex grid layouts. 
 
-Traditionally, extracting regional civic data from heavy PDF scans leads to browser timeouts and memory crashes. MatdarMitra overcomes this by utilizing a **Decoupled Microservices Architecture**, blending a seamless React user interface with a background Node.js gateway, backed by a heavyweight Python/Computer Vision extraction engine.
+For civic tech workers, political analysts, and researchers, manually digitizing these PDFs into Excel sheets or databases takes days of grueling manual data entry. Standard OCR (Optical Character Recognition) tools fail completely due to the dense tabular grid and intersecting lines. Furthermore, processing such massive documents on a standard web application inevitably leads to browser timeouts and memory crashes.
+
+## 💡 The Solution
+
+**MatdarMitra** is a fully automated, AI-driven extraction pipeline and dashboard. It takes a raw, unstructured government PDF voter roll and autonomously transforms it into a highly actionable, searchable, and structured cloud database. 
+
+It completely abstracts away the heavy lifting using a **Decoupled Microservices Architecture**, guaranteeing a seamless user experience even when the backend is processing thousands of images.
 
 ---
 
-## 🌍 Live Deployments & Repository
+## ✨ Core Features (Business Value)
+
+- 📄 **Intelligent Document Processing:** Upload a 40+ page voter roll PDF, and the AI will slice, align, and read bilingual text accurately.
+- 👨‍👩‍👧‍👦 **Family & Relationship Mapping:** Smart algorithms detect and flag potential family members based on house numbers and relative names, allowing users to build custom "Family Lists" instantly.
+- 🔍 **Real-Time Advanced Search:** Search through thousands of extracted voter records in milliseconds using debounced queries, age ranges, and gender filters.
+- 📥 **One-Click Export Pipeline:** Instantly export filtered records or custom family sets directly to **Microsoft Word, Excel, or formatted PDFs** for on-ground fieldwork.
+- ⚡ **Asynchronous Polling:** Users never face a frozen screen. The frontend continuously polls the Node.js API using HTTP 202 to display live extraction progress (Page x/40 completed).
+
+---
+
+## 🌍 Live Deployments & Cloud Ecosystem
+
+MatdarMitra is deployed via a modern three-tier cloud architecture ensuring high availability and fault isolation.
 
 | Environment | Live Link | Description |
 | :--- | :--- | :--- |
 | 🖥️ **Frontend Application** | [kasim-matdar-mitra.vercel.app](https://kasim-matdar-mitra.vercel.app) | The live, production-ready Next.js user interface. Hosted on Vercel Edge Network for instant global access. |
-| ⚙️ **Backend API (Node)** | [matdarmitra.onrender.com](https://matdarmitra.onrender.com) | The live Express API managing document streams and database synchronization. Hosted on Render. |
-| 🤖 **AI Microservice (Python)** | [matdarmitra-1.onrender.com](https://matdarmitra-1.onrender.com/docs) | The FastAPI worker engine providing Tesseract Computer Vision and OpenCV PDF slicing endpoints (Link points to interactive Swagger UI). |
-| �️ **Database (MongoDB Atlas)** | *Private / Secured* | A resilient cloud-hosted NoSQL cluster utilizing dynamic schemas for storing unstructured voter metadata. |
-| �📂 **Source Code** | [kasimshah19/MatdarMitra](https://github.com/kasimshah19/MatdarMitra) | The complete, open-source microservices codebase. |
+| ⚙️ **Backend API (Node)** | [matdarmitra.onrender.com](https://matdarmitra.onrender.com) | The live Express API managing document streams, async polling, and database synchronization. Hosted on Render. |
+| 🤖 **AI Microservice (Python)** | [matdarmitra-1.onrender.com](https://matdarmitra-1.onrender.com/docs) | The FastAPI worker engine providing heavy Tesseract Computer Vision and OpenCV PDF slicing endpoints (Link points to interactive Swagger UI). |
+| 🗄️ **Database (MongoDB Atlas)** | *Private / Secured* | A resilient cloud-hosted NoSQL cluster utilizing dynamic schemas for storing unstructured voter metadata. |
+| 📂 **Source Code** | [kasimshah19/MatdarMitra](https://github.com/kasimshah19/MatdarMitra) | The complete, open-source microservices codebase containing all UI and backend Logic. |
 
 ---
 
-## 🚀 Key Architectural Features
+## 🏗️ Architecture & Engineering Feats
 
-| Feature | Technical Implementation | Impact |
+Building this platform required solving deep technical challenges regarding memory starvation and thread deadlocks.
+
+| Problem Solved | Technical Implementation | Impact |
 | :--- | :--- | :--- |
-| **Decoupled Microservices** | Strict separation of Next.js frontend, Node.js/Express gateway, and Python/FastAPI worker. | Guarantees the frontend never hangs or times out (HTTP 202 Async Polling) during computationally heavy tasks. |
-| **Resilient OCR Pipeline** | PyMuPDF rendering ➔ OpenCV morphological layout detection ➔ Tesseract OCR. | Successfully parses messy bilingual files (Marathi & English) isolating individual voter cards with extreme accuracy. |
-| **OS ThreadPool Tuning** | C++ ThreadPoolExecutor bounded precisely via `OCR_CONCURRENCY=2`. | Prevents OpenMP internal thread explosions, eliminating memory starvation and fatal OS live-locks during 40+ page processing. |
-| **Data Preservation** | Mongoose `$or` conditional pipelines with dynamic `needsReview` flags. | Missing OCR confidence on a single field never drops a valid citizen; messy records are surfaced for manual review safely. |
-| **Server-Side Pagination** | Optimized MongoDB indexed queries (`skip` & `limit`) bounded by explicit total counts. | Instantly loads gigabytes of analytical data into the React UI without freezing the client's browser heap. |
-
----
-
-## 🧠 System Architecture Flow
-
-The system coordinates exactly like a modern enterprise data pipeline:
-
-1. **Client Upload**: User uploads a 40+ page heavy PDF via the **React Context API**.
-2. **Gateway Registration**: **Node.js Gateway** instantly registers the file grid, generates a MongoDB `Document` Schema ID, and immediately returns a `HTTP 202 Accepted` to free the browser.
-3. **Background Processing**: Node.js forwards the payload to the **Python Microservice**.
-4. **Machine Vision Extraction**: Python slices the PDF, utilizes **OpenCV** math to detect absolute voter-card geometry grids, and pipes crops into **Tesseract OCR**.
-5. **Real-time Synchronization**: The React frontend securely polls the Node Gateway every 3 seconds to fetch dynamic pipeline statuses. 
-6. **Data Formatting**: User seamlessly filters, searches, builds Custom Family Lists across pages safely, and exports them directly natively to **Word / Excel / PDF**.
+| **Monolith Timouts & Freezes** | Strict decoupling of Next.js frontend, Node.js gateway, and a Python/FastAPI worker via Async Polling. | Guarantees the frontend never hangs. The user UI remains fluid while servers crunch gigabytes of data. |
+| **Grid Boundary Leakage** | Mathematical morphological layout detection using `OpenCV2` and `PyMuPDF`. | Successfully slices messy bilingual files isolating exact voter coordinates with extreme accuracy. |
+| **Fatal OS Memory Crashes** | C++ ThreadPoolExecutor bounded precisely via explicit ENV Variables (`OMP_THREAD_LIMIT`). | Prevented OpenMP internal thread explosions, eliminating fatal OS live-locks (`0x40000015`) during batch processing. |
+| **Partial OCR Failures** | Mongoose `$or` conditional pipelines with dynamic `needsReview` fallback flags. | A missed OCR confidence score never drops a valid citizen; messy records are preserved and safely surfaced for manual review. |
+| **Client Heap Overflow** | Optimized MongoDB indexed queries (`skip` & `limit`) bounded by explicit total counts. | Instantly loads gigabytes of analytical data into the React UI without freezing the client's browser heap. |
 
 ---
 
 ## 🛠️ Technology Stack Breakdown
 
-| Layer | Technologies Selected | Justification |
-| :--- | :--- | :--- |
-| **Frontend UI** | React 18, Next.js, Tailwind CSS, Lucide Icons | Component-driven architecture ensuring state immutability and blazing fast hydrated client rendering. |
-| **Backend Gateway** | Node.js, Express.js, Multer | Lightweight event-loop capabilities perfect for proxying I/O polling requests and handling multi-part file streams. |
-| **AI / Extraction** | Python 3, FastAPI, OpenCV, PyTesseract, PyMuPDF | The sheer mathematical ecosystem of Python allows for precision image matrix slicing and NLP extraction. |
-| **Database** | Mongodb, Mongoose ORM | Document-level NoSQL scaling allows for highly dynamic schema properties and rapid chunk updates. |
+- **Frontend:** React 18, Next.js (App Router), Tailwind CSS, Lucide Icons.
+- **Node.js Gateway:** Express.js, Multer (Multipart Streams), CORS, Mongoose.
+- **Computer Vision API:** Python 3.9, FastAPI, OpenCV, PyTesseract (Custom Marathi language packs), PyMuPDF (Fitz).
+- **Infrastructure:** Docker, Render (PaaS), Vercel, MongoDB Atlas.
 
 ---
 
@@ -74,34 +85,35 @@ The system coordinates exactly like a modern enterprise data pipeline:
 
 *Because this is a microservices architecture, you will need to spin up the independent servers concurrently.*
 
-### 1. Start the MongoDB Connection & Node Gateway
+### 1. MongoDB & Node.js Gateway
 ```bash
 cd backend
 npm install
-# Ensure you have your MongoDB URI in a .env file
+# Create a .env file with MONGODB_URI and FRONTEND_URL
 npm run dev
 ```
 
-### 2. Start the AI Extraction Worker
+### 2. AI Extraction Worker (Python)
 ```bash
 cd extraction-service
-# (Recommended) Activate your Python virtual environment
+# It is recommended to use a Python virtual environment (venv)
 pip install -r requirements.txt
-python -m uvicorn main:app --reload --port 8000
-# Note: Ensure system-level Tesseract-OCR is installed and added to PATH.
+# Requires system-level tesseract-ocr and tesseract-ocr-mar to be pre-installed!
+uvicorn main:app --reload --port 8000
 ```
 
-### 3. Start the Next.js Client
+### 3. Next.js Web Client
 ```bash
 # In the root MatdarMitra directory
 npm install
+# Create .env.local with NEXT_PUBLIC_API_URL=http://localhost:5000
 npm run dev
-# Running on http://localhost:3000
+# Open http://localhost:3000
 ```
 
 ---
 
 <div align="center">
-  <b>Developed thoughtfully by Kasim Shah.</b> <br/>
+  <b>Architected and Developed by Kasim Shah.</b> <br/>
   <i>Engineered for scale. Built for impact.</i>
 </div>
