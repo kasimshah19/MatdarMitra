@@ -74,10 +74,13 @@ Building this platform required solving deep technical challenges regarding memo
 
 ## 🛠️ Technology Stack Breakdown
 
-- **Frontend:** React 18, Next.js (App Router), Tailwind CSS, Lucide Icons.
-- **Node.js Gateway:** Express.js, Multer (Multipart Streams), CORS, Mongoose.
-- **Computer Vision API:** Python 3.9, FastAPI, OpenCV, PyTesseract (Custom Marathi language packs), PyMuPDF (Fitz).
-- **Infrastructure:** Docker, Render (PaaS), Vercel, MongoDB Atlas.
+| Architectural Layer | Core Technologies | Engineering Justification |
+| :--- | :--- | :--- |
+| 🖥️ **Frontend Client** | **React 18, Next.js (App Router), Tailwind CSS** | Delivers a highly responsive, hydrated client-side UI. Ensures instant state updates for data filtering without reloading, which is critical for interacting with huge datasets. |
+| 🔀 **API Gateway** | **Node.js, Express.js, Multer, Mongoose** | Acts as an agile middleware proxy. Its non-blocking I/O event loop is perfect for managing persistent HTTP 202 async polling from the client and streaming large multipart PDF files. |
+| 🧠 **Computer Vision Engine** | **Python 3.9, FastAPI, OpenCV, PyMuPDF** | The heavy-lifting worker. Python's unparalleled mathematical ecosystem allows for precise matrix transformations (OpenCV) and layout slicing before running optical character recognition. |
+| 📝 **OCR / NLP Pipeline** | **Tesseract-OCR (Marathi + English Packs)** | Specifically tuned with regional language data packs and strict concurrent execution limits to accurately extract Devanagari script from extremely noisy, low-quality government scans. |
+| ☁️ **Cloud Infrastructure** | **MongoDB Atlas, Docker, Vercel, Render** | A fully managed, decoupled enterprise cloud layer. MongoDB stores unstructured metadata dynamically, Docker containerizes Linux dependencies (Tesseract), and Vercel serves the UI on the Edge. |
 
 ---
 
