@@ -1,0 +1,20 @@
+﻿warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+Starting E2E Extraction Test on: C:\Users\kasim\Downloads\2026-EROLLGEN-S13-8-SIR-DraftRoll-Revision1-MAR-72-WI.pdf
+========== PYTHON EXTRACTION RESULT ==========
+PDF pages: 39
+Pages processed: 39
+Parsed records: 2107
+==============================================
+
+--- E2E TEST SUMMARY ---
+Time Taken: 648.98 seconds
+Pages Processed: 39
+Total Extracted: 2107
+Flagged Needs Review: 742
+
+Sample 5 Records:
+1. EPC: OS | Name:  | Age: 0 | Rev: True
+2. EPC:  | Name:  | Age: 0 | Rev: True
+3. EPC: OE | Name:  | Age: 0 | Rev: True
+4. EPC:  | Name:  | Age: 0 | Rev: True
+5. EPC: ST | Name:  | Age: 0 | Rev: True

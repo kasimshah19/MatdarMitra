@@ -11,11 +11,10 @@ from pipeline.ocr import extract_epc, extract_box_text
 from pipeline.parse import parse_devanagari_fields
 
 def main():
-    pdf_path = r'test-data\2026-EROLLGEN-S13-8-SIR-DraftRoll-Revision1-MAR-75-WI.pdf'
-    pdf_path = os.path.abspath(pdf_path)
+    pdf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "2026-EROLLGEN-S13-8-SIR-DraftRoll-Revision1-MAR-75-WI.pdf")
     print("Using exact file:", pdf_path)
     if not os.path.exists(pdf_path):
-        print('PDF missing')
+        print(f'PDF missing at {pdf_path}')
         return
     doc = fitz.open(pdf_path)
     page = doc.load_page(2)

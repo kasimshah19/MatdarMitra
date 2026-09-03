@@ -1,0 +1,17 @@
+﻿warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+Using exact file: C:\Users\kasim\Downloads\matdarmitra\extraction-service\2026-EROLLGEN-S13-8-SIR-DraftRoll-Revision1-MAR-75-WI.pdf
+--- GRID DETECTION ---
+[MM:LAYOUT] Grid deduplicated: 60 raw contours -> 30 distinct cells.
+Detected 30 boxes on page 3.
+Box #1 Coordinates: x=192, y=390, w=2588, h=1050
+
+--- EPC REGION ---
+RAW_EPC_OCR:
+'ùYLT9736703\n'
+
+--- TEXT REGION ---
+RAW_TEXT_OCR:
+(Text saved to raw_ocr_out.txt to avoid cp1252 print crash)
+
+--- PARSED RESULT ---
+(Parsed result saved to parsed_out.txt)

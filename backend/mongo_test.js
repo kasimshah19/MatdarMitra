@@ -1,0 +1,1 @@
+require('dotenv').config(); const mongoose = require('mongoose'); const fs = require('fs'); async function run() { await mongoose.connect(process.env.MONGODB_URI); const doc = await mongoose.connection.db.collection('voters').findOne({epcNo: 'YLT9736703'}); console.log('Found:', doc); process.exit(0); } run().catch(console.error);

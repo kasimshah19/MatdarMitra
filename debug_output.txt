@@ -1,0 +1,53 @@
+2c0139c Update app name to matdarmitra in package.json
+90b9542 Fix React state upload refresh, prevent age filters hiding OCR fallback records, and enforce strict OCR concurrency limits
+7043961 Implement decoupled background upload processing, Document schema model, and async polling status architecture
+323c11a Refactor OCR extraction architecture: Add async ThreadPool scaling, real-time React UI polling, and robust Voter database fail-safes for massive datasets
+5566585 Fix database insertion validation errors and timeout bugs in OCR pipeline
+35f0b2c Initial commit for MatdarMitra full-stack app
+
+---
+./.eslintrc.json
+./app\layout.tsx
+./app\page.tsx
+./backend\models\Document.js
+./backend\models\FamilyList.js
+./backend\models\Voter.js
+./backend\package-lock.json
+./backend\package.json
+./backend\server.js
+./backend\test_upload.js
+./components\ExportPanel.tsx
+./components\FamilyListPanel.tsx
+./components\FamilyListPrintView.tsx
+./components\Header.tsx
+./components\MetadataForm.tsx
+./components\SearchFilters.tsx
+./components\UploadPanel.tsx
+./components\VoterTable.tsx
+./extraction-service\check_text.py
+./extraction-service\main.py
+./extraction-service\models.py
+./extraction-service\pipeline\grid.py
+./extraction-service\pipeline\header.py
+./extraction-service\pipeline\ocr.py
+./extraction-service\pipeline\parse.py
+./extraction-service\pipeline\render.py
+./extraction-service\replace_main.py
+./extraction-service\test_extraction.py
+./extraction-service\test_full_pipeline.py
+./extraction-service\test_pipeline.py
+./extraction-service\test_run.py
+./hooks\use-mobile.ts
+./hooks\useDebounce.ts
+./lib\mock-data.ts
+./lib\utils.ts
+./metadata.json
+./next-env.d.ts
+./next.config.ts
+./package-lock.json
+./package.json
+./tsconfig.json
+./types.ts
+./utils\export\exportExcel.ts
+./utils\export\exportPdf.ts
+./utils\export\exportWord.ts

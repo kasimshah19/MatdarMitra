@@ -1,0 +1,10 @@
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/', (req, res) => {
+app.get('/api/health', async (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.get('/api/upload-status/:jobId', async (req, res) => {
+app.get('/api/voters', async (req, res) => {
+app.get('/api/documents/:documentId/diagnostics', async (req, res) => {
+app.get('/api/family-list', async (req, res) => {
+app.post('/api/family-list', async (req, res) => {
+app.delete('/api/family-list/:voterId', async (req, res) => {

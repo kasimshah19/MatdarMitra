@@ -58,11 +58,12 @@ def extract_box_text(image: np.ndarray, box: tuple, page_no: int, sr_idx: int) -
     """
     x, y, w, h = box
     
-    # Crop out the photo area (usually left side/bottom left)
-    # We take the middle-right area which holds the textual details
-    crop_x = int(w * 0.1) # Skips the very left edge mostly
+    # Crop out the photo area (usually right side)
+    # E-rolls have text immediately on the left, so we MUST NOT crop the left margin!
+    crop_x = int(w * 0.02) # Trivial 2% pad to avoid border lines
+    crop_w = int(w * 0.70) # Only process the left 70% where text lives
     crop_y = int(h * 0.20) # Skip the top EPC line
-    text_crop = image[y+crop_y:y+h, x+crop_x:x+w]
+    text_crop = image[y+crop_y:y+h, x+crop_x:x+crop_w]
     
     if len(text_crop.shape) == 3:
         text_crop = cv2.cvtColor(text_crop, cv2.COLOR_BGR2GRAY)
