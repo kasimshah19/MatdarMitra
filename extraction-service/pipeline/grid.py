@@ -52,6 +52,7 @@ def detect_grid_boxes(image: np.ndarray) -> List[Tuple[int, int, int, int]]:
     min_area = (img_w / 10) * (img_h / 30) # ~ 80k sq px
     max_area = (img_w / 2) * (img_h / 5)   # ~ 500k sq px
 
+    raw_boxes = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         area = w * h
@@ -59,7 +60,33 @@ def detect_grid_boxes(image: np.ndarray) -> List[Tuple[int, int, int, int]]:
         
         # Expect wider than tall boxes (ratio typically 2.5 to 3.5)
         if min_area < area < max_area and 1.5 < aspect_ratio < 5.0:
-            boxes.append((x, y, w, h))
+            raw_boxes.append((x, y, w, h))
+
+    # Deduplicate overlapping boxes (e.g. inner/outer border matches from RETR_TREE)
+    def compute_iou(boxA, boxB):
+        xA = max(boxA[0], boxB[0])
+        yA = max(boxA[1], boxB[1])
+        xB = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
+        yB = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
+        interArea = max(0, xB - xA) * max(0, yB - yA)
+        if interArea == 0:
+            return 0
+        boxAArea = boxA[2] * boxA[3]
+        boxBArea = boxB[2] * boxB[3]
+        return interArea / float(boxAArea + boxBArea - interArea)
+
+    boxes = []
+    # Sort raw_boxes by area descending so we prefer the slightly larger outer box
+    raw_boxes.sort(key=lambda b: b[2]*b[3], reverse=True)
+    for b in raw_boxes:
+        # If it doesn't heavily overlap with an already accepted box, keep it
+        is_duplicate = False
+        for valid_b in boxes:
+            if compute_iou(b, valid_b) > 0.6:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            boxes.append(b)
 
     # 5. Sort boxes (Reading order: Top to Bottom, then Left to Right within a row)
     # We cluster by Y-coordinate (rows) to handle slight slants
@@ -92,5 +119,7 @@ def detect_grid_boxes(image: np.ndarray) -> List[Tuple[int, int, int, int]]:
 
     # Flatten the row-sorted boxes list
     sorted_boxes = [box for row in rows for box in row]
+    
+    print(f"[MM:LAYOUT] Grid deduplicated: {len(raw_boxes)} raw contours -> {len(sorted_boxes)} distinct cells.")
     
     return sorted_boxes

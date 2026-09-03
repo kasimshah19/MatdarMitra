@@ -49,22 +49,20 @@ def extract_epc(image: np.ndarray, box: tuple) -> tuple[str, bool]:
     if not re.match(r'^[A-Z]{2,4}[0-9]{6,8}$', clean_epc):
          needs_review = True
          
-    return clean_epc, needs_review
+    return clean_epc, needs_review, epc_thresh, raw_epc
 
 
-def extract_box_text(image: np.ndarray, box: tuple) -> str:
+def extract_box_text(image: np.ndarray, box: tuple, page_no: int, sr_idx: int) -> str:
     """
     Crops the main text body of the cell box and runs Marathi OCR.
     """
     x, y, w, h = box
     
-    # The text is usually below the photo header block on the left
-    # But usually just OCRing the whole box minus the photo slot works best.
-    # The photo block is typically center-right. We'll crop slightly inside the borders.
-    
-    # Give a small 2-pixel pad to exclude the black border lines
-    pad = 3
-    text_crop = image[y+pad:y+h-pad, x+pad:x+w-pad]
+    # Crop out the photo area (usually left side/bottom left)
+    # We take the middle-right area which holds the textual details
+    crop_x = int(w * 0.1) # Skips the very left edge mostly
+    crop_y = int(h * 0.20) # Skip the top EPC line
+    text_crop = image[y+crop_y:y+h, x+crop_x:x+w]
     
     if len(text_crop.shape) == 3:
         text_crop = cv2.cvtColor(text_crop, cv2.COLOR_BGR2GRAY)
@@ -72,28 +70,51 @@ def extract_box_text(image: np.ndarray, box: tuple) -> str:
     # Simple binary threshold often works best for text, or Otsu
     _, text_thresh = cv2.threshold(text_crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
+    # Save debug crop for first box
+    if page_no == 3 and sr_idx == 1:
+        cv2.imwrite(f"debug_page1_box1_text.png", text_thresh)
+        
     # PSM 6: Assume a single uniform block of text
+    # It is crucial to have the Marathi language pack installed (mar)
     raw_text = pytesseract.image_to_string(text_thresh, lang='mar', config='--psm 6')
+    
+    if page_no == 3 and sr_idx == 1:
+        with open("debug_page1_box1_raw_ocr.txt", "w", encoding="utf-8") as f:
+            f.write(raw_text)
+            
     return raw_text
 
 
 def process_box(image: np.ndarray, box: tuple, sr_idx: int, page_no: int, part_no: str) -> Optional[VoterRecord]:
     """
     Coordinates the extraction for a single voter cell.
-    sr_idx: The sequential index of this box (derived from reading order).
     """
-    
     # 1. OCR the EPC number
-    epc_val, epc_review = extract_epc(image, box)
+    epc_val, epc_review, epc_img, epc_raw = extract_epc(image, box)
     
     # 2. OCR the main Marathi text
-    raw_text = extract_box_text(image, box)
+    raw_text = extract_box_text(image, box, page_no, sr_idx)
     
+    if page_no == 3 and sr_idx == 1:
+        cv2.imwrite(f"debug_page1_box1_epc.png", epc_img)
+        with open("debug_page1_box1_raw_ocr_epc.txt", "w", encoding="utf-8") as f:
+            f.write(epc_raw)
+            
     # 3. Parse the fields
     parsed_fields = parse_devanagari_fields(raw_text)
     
-    # Combine review flags
-    needs_review_overall = epc_review or parsed_fields["needsReview"]
+    # Calculate genuine completeness confidence (5 fields tested)
+    valid_fields = 0
+    if not epc_review: valid_fields += 1
+    if parsed_fields["voterName"] != "Unknown": valid_fields += 1
+    if parsed_fields["relativeName"] != "Unknown": valid_fields += 1
+    if parsed_fields["age"] != 0 and parsed_fields["age"] != None: valid_fields += 1
+    if parsed_fields["gender"] != "Other": valid_fields += 1
+    
+    computed_confidence = round(valid_fields / 5.0, 2)
+    
+    # Combine review flags (If we missed crucial fields or EPC failed formatting)
+    needs_review_overall = (computed_confidence < 0.6) or epc_review or parsed_fields["needsReview"]
     
     # Construct record
     record = VoterRecord(
@@ -107,6 +128,7 @@ def process_box(image: np.ndarray, box: tuple, sr_idx: int, page_no: int, part_n
         gender=parsed_fields["gender"],
         partNo=part_no,
         pageNo=page_no,
+        confidence=computed_confidence,
         needsReview=needs_review_overall
     )
     

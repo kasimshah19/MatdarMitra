@@ -57,12 +57,16 @@ def run_extraction_job(job_id: str, temp_path: str):
             page_voters = []
             page_review = 0
             boxes = detect_grid_boxes(page_img)
+            
+            # Skip cover pages and non-data pages
+            if len(boxes) < 20:
+                print(f"[MM:MAIN] Skipping page {idx+1} - only {len(boxes)} grid cells detected (likely cover/summary).")
+                return (idx, [], 0)
+                
             # Rough native checking
-            for box in boxes:
-                vdata = process_box(page_img, box, sr_idx=0, page_no=idx+1, part_no=metadata.partNumber)
+            for b_idx, box in enumerate(boxes):
+                vdata = process_box(page_img, box, sr_idx=b_idx+1, page_no=idx+1, part_no=metadata.partNumber)
                 if vdata:
-                    # Score confidence
-                    vdata.confidence = 0.95 if not vdata.needsReview else 0.65
                     page_voters.append(vdata)
                     if vdata.needsReview: page_review += 1
             return (idx, page_voters, page_review)
