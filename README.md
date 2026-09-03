@@ -22,6 +22,16 @@ Traditionally, extracting regional civic data from heavy PDF scans leads to brow
 
 ---
 
+## 🌍 Live Deployments & Repository
+
+| Environment | Live Link | Description |
+| :--- | :--- | :--- |
+| 🖥️ **Frontend Application** | [kasim-matdar-mitra.vercel.app](https://kasim-matdar-mitra.vercel.app) | The live, production-ready Next.js user interface. Hosted on Vercel Edge Network for instant global access. |
+| ⚙️ **Backend API (Node)** | [matdarmitra.onrender.com](https://matdarmitra.onrender.com) | The live Express API managing document streams and database synchronization. Hosted on Render. |
+| 📂 **Source Code** | [kasimshah19/MatdarMitra](https://github.com/kasimshah19/MatdarMitra) | The complete, open-source microservices codebase. |
+
+---
+
 ## 🚀 Key Architectural Features
 
 | Feature | Technical Implementation | Impact |
