@@ -22,8 +22,8 @@ COPY . .
 ENV OMP_THREAD_LIMIT=1
 ENV OCR_CONCURRENCY=1
 
-# Expose the port Uvicorn uses
-EXPOSE 8000
+# Expose the port Render assigns
+EXPOSE 10000
 
-# Start the FastAPI application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the FastAPI application on Render's dynamic PORT
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}"]
