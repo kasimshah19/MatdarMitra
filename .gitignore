@@ -11,7 +11,6 @@ __pycache__
 backend/node_modules/
 backend/.env*
 extraction-service/__pycache__
-*.pdf
 *.png
 extraction-service/dev_*.txt
 *_out.txt

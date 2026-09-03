@@ -21,72 +21,69 @@ def parse_devanagari_fields(raw_text: str) -> Dict[str, Any]:
         "needsReview": False
     }
     
-    # Text cleaning: split lines, strip whitespace, remove empty lines
+    # 1. Text cleaning: split lines, strip whitespace, remove empty lines
     lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
-    full_text = " ".join(lines)
     
-    # 1. Voter Name (नाव)
-    # Match "नाव :" or "नाव" followed by the content up to the next keyword
-    name_match = re.search(r'नाव\s*[:;]?\s*(.*?)(?=\s*(?:वडिलांचे|पतीचे|आईचे|इतर|घर|वय))', full_text)
-    if name_match:
-        data["voterName"] = name_match.group(1).strip()
-    
-    # 2. Relative Name & Relation Type
-    rel_match = re.search(r'(वडिलांचे|पतीचे|आईचे|इतर)?\s*नाव\s*[:;]?\s*(.*?)(?=\s*(?:घर|वय))', full_text)
-    if rel_match:
-        rel_type_str = rel_match.group(1)
-        if rel_type_str == "वडिलांचे":
+    if len(lines) >= 1:
+        # Line 1: Voter Name
+        m = re.match(r'^नाव\s*[:;]?\s*(.+)$', lines[0])
+        if m:
+            data["voterName"] = m.group(1).strip()
+            
+    if len(lines) >= 2:
+        # Line 2: Relative Name & Relation Type
+        line2 = lines[1]
+        if "वडिलांचे" in line2:
             data["relationType"] = "Father"
-        elif rel_type_str == "पतीचे":
+        elif "पतीचे" in line2:
             data["relationType"] = "Husband"
-        elif rel_type_str == "आईचे":
+        elif "पत्नीचे" in line2:
+            data["relationType"] = "Wife"
+        elif "आईचे" in line2:
              data["relationType"] = "Mother"
         else:
              data["relationType"] = "Other"
              
-        data["relativeName"] = rel_match.group(2).strip()
-
-    # 3. House No (घर क्रमांक)
-    house_match = re.search(r'घर\s*क्र(?:मांक)?\s*[:;]?\s*([a-zA-Z0-9\-/]+)(?=\s*वय)', full_text, flags=re.IGNORECASE)
-    if house_match:
-        data["houseNo"] = house_match.group(1).strip()
-    else:
-        # Sometimes 'घर क्र.' runs directly into the number with noise
-        house_fallback = re.search(r'घर.*?[:;]?\s*([a-zA-Z0-9\-/]+)', full_text)
-        if house_fallback:
-             data["houseNo"] = house_fallback.group(1).strip()
-
-    # 4. Age (वय)
-    age_match = re.search(r'वय\s*[:;]?\s*(\d{2,3})', full_text)
-    if age_match:
-        try:
-            data["age"] = int(age_match.group(1))
-        except ValueError:
-            data["needsReview"] = True
-    else:
-         data["needsReview"] = True
-
-    # 5. Gender (लिंग)
-    gender_match = re.search(r'लिंग\s*[:;]?\s*(पुरुष|महिला|तृतीयपंथी)', full_text)
-    if gender_match:
-        g = gender_match.group(1)
-        if g == "पुरुष":
-            data["gender"] = "Male"
-        elif g == "महिला":
-            data["gender"] = "Female"
+        parts = re.split(r'[:;ः]', line2, maxsplit=1)
+        if len(parts) > 1:
+            data["relativeName"] = parts[1].strip()
+        elif "नाव" in line2:
+            # fallback if colon is missing
+            data["relativeName"] = line2.split("नाव", 1)[1].strip()
+            
+    if len(lines) >= 3:
+        # Line 3: House No
+        m = re.match(r'^घर\s*क्र(?:मांक)?\s*[:;]?\s*(.*)$', lines[2])
+        if m:
+            data["houseNo"] = m.group(1).strip()
+            
+    if len(lines) >= 4:
+        # Line 4: Age & Gender
+        line4 = lines[3]
+        if 'लिंग' in line4:
+            parts = line4.split('लिंग', 1)
+            age_m = re.search(r'\d+', parts[0])
+            if age_m:
+                data["age"] = int(age_m.group(0))
+            if 'महिला' in parts[1]:
+                data["gender"] = "Female"
+            elif 'पुरुष' in parts[1]:
+                data["gender"] = "Male"
+            else:
+                data["gender"] = "Other"
         else:
-            data["gender"] = "Other"
-    else:
-        # Fallback keyword match if 'लिंग' keyword is garbled
-        if "पुरुष" in full_text:
-             data["gender"] = "Male"
-        elif "महिला" in full_text:
-             data["gender"] = "Female"
-        else:
-             data["needsReview"] = True
+            age_m = re.search(r'\d+', line4)
+            if age_m:
+                 data["age"] = int(age_m.group(0))
+            if 'महिला' in line4:
+                 data["gender"] = "Female"
+            elif 'पुरुष' in line4:
+                 data["gender"] = "Male"
 
     # Final review flags: check if essential text extraction completely failed
     if not data["voterName"] or not data["relativeName"]:
+         data["needsReview"] = True
+    if data["age"] == 0:
          data["needsReview"] = True
 
     return data

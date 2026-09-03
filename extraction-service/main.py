@@ -72,9 +72,9 @@ def run_extraction_job(job_id: str, temp_path: str):
             return (idx, page_voters, page_review)
 
         page_results = []
-        # MUST Restrict concurrency to prevent OS Live-Lock/Starvation. 
         # Tesseract spins up OpenMP threads internally.
-        ocr_concurrency = int(os.getenv("OCR_CONCURRENCY", "2"))
+        os.environ["OMP_THREAD_LIMIT"] = "1"
+        ocr_concurrency = int(os.getenv("OCR_CONCURRENCY", "1"))
         with ThreadPoolExecutor(max_workers=ocr_concurrency) as executor:
             future_to_page = {executor.submit(process_page_thread, i, p): i for i, p in enumerate(pages)}
             for future in as_completed(future_to_page):

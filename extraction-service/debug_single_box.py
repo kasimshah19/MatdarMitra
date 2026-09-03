@@ -24,7 +24,7 @@ def main():
     print('--- GRID DETECTION ---')
     boxes = detect_grid_boxes(img)
     print(f'Detected {len(boxes)} boxes on page 3.')
-    if len(boxes) == 0: return
+    if len(boxes) < 1: return
     box = boxes[0]
     x, y, w, h = box
     print(f'Box #1 Coordinates: x={x}, y={y}, w={w}, h={h}')
