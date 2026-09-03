@@ -28,6 +28,7 @@ Traditionally, extracting regional civic data from heavy PDF scans leads to brow
 | :--- | :--- | :--- |
 | 🖥️ **Frontend Application** | [kasim-matdar-mitra.vercel.app](https://kasim-matdar-mitra.vercel.app) | The live, production-ready Next.js user interface. Hosted on Vercel Edge Network for instant global access. |
 | ⚙️ **Backend API (Node)** | [matdarmitra.onrender.com](https://matdarmitra.onrender.com) | The live Express API managing document streams and database synchronization. Hosted on Render. |
+| 🤖 **AI Microservice (Python)** | [matdarmitra-1.onrender.com](https://matdarmitra-1.onrender.com/docs) | The FastAPI worker engine providing Tesseract Computer Vision and OpenCV PDF slicing endpoints (Link points to interactive Swagger UI). |
 | 📂 **Source Code** | [kasimshah19/MatdarMitra](https://github.com/kasimshah19/MatdarMitra) | The complete, open-source microservices codebase. |
 
 ---
